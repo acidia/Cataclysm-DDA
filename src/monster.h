@@ -5,6 +5,7 @@
 #include "creature.h"
 #include "enums.h"
 #include "int_id.h"
+#include "calendar.h"
 
 #include <vector>
 #include <map>
@@ -58,6 +59,16 @@ enum monster_effect_cache_fields {
     MOVEMENT_IMPAIRED = 0,
     FLEEING,
     NUM_MEFF
+};
+
+enum monster_horde_attraction {
+    MHA_NULL = 0,
+    MHA_ALWAYS,
+    MHA_LARGE,
+    MHA_OUTDOORS,
+    MHA_OUTDOORS_AND_LARGE,
+    MHA_NEVER,
+    NUM_MONSTER_HORDE_ATTRACTION
 };
 
 class monster : public Creature
@@ -285,7 +296,7 @@ class monster : public Creature
         /** Performs any monster-specific modifications to the arguments before passing to Creature::add_effect(). */
         void add_effect( const efftype_id &eff_id, time_duration dur, body_part bp = num_bp,
                          bool permanent = false,
-                         int intensity = 0, bool force = false ) override;
+                         int intensity = 0, bool force = false, bool defererd = false ) override;
         /** Returns a std::string containing effects for descriptions */
         std::string get_effect_status() const;
 
@@ -303,6 +314,10 @@ class monster : public Creature
         float  get_melee() const override; // For determining attack skill when awarding dodge practice.
         float  hit_roll() const override;  // For the purposes of comparing to player::dodge_roll()
         float  dodge_roll() override;  // For the purposes of comparing to player::hit_roll()
+
+        monster_horde_attraction get_horde_attraction();
+        void set_horde_attraction( monster_horde_attraction mha );
+        bool will_join_horde( int size );
 
         /** Returns multiplier on fall damage at low velocity (knockback/pit/1 z-level, not 5 z-levels) */
         float fall_damage_mod() const override;
@@ -381,12 +396,15 @@ class monster : public Creature
 
         // DEFINING VALUES
         int friendly;
-        int anger, morale;
+        int anger = 0;
+        int morale = 0;
         mfaction_id faction; // Our faction (species, for most monsters)
         int mission_id; // If we're related to a mission
         const mtype *type;
         bool no_extra_death_drops;    // if true, don't spawn loot items as part of death
         bool no_corpse_quiet = false; //if true, monster dies quietly and leaves no corpse
+        bool death_drops =
+            true; // Turned to false for simulating monsters during distant missions so they don't drop in sight
         bool is_dead() const;
         bool made_footstep;
         std::string unique_name; // If we're unique
@@ -425,9 +443,10 @@ class monster : public Creature
          */
         void init_from_item( const item &itm );
 
-        int last_updated;
+        time_point last_updated = calendar::time_of_cataclysm;
         int last_baby;
         int last_biosig;
+
         /**
          * Do some cleanup and caching as monster is being unloaded from map.
          */
@@ -456,6 +475,7 @@ class monster : public Creature
         int baby_timer;
         bool biosignatures;
         int biosig_timer;
+        monster_horde_attraction horde_attraction;
         /** Found path. Note: Not used by monsters that don't pathfind! **/
         std::vector<tripoint> path;
         std::bitset<NUM_MEFF> effect_cache;

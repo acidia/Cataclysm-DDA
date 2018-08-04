@@ -9,6 +9,7 @@
 #include <map>
 
 #include "enums.h"
+#include "calendar.h"
 #include "npc_favor.h"
 
 class player;
@@ -16,7 +17,6 @@ class mission;
 class game;
 class npc;
 class Creature;
-class calendar;
 class npc_class;
 class JsonObject;
 class JsonIn;
@@ -172,8 +172,8 @@ struct mission_type {
     mission_goal goal; // The basic goal type
     int difficulty = 0; // Difficulty; TODO: come up with a scale
     int value = 0; // Value; determines rewards and such
-    int deadline_low = 0; // Low and high deadlines (turn numbers)
-    int deadline_high = 0;
+    time_duration deadline_low = 0_turns; // Low and high deadlines
+    time_duration deadline_high = 0_turns;
     bool urgent = false; // If true, the NPC will press this mission!
 
     std::vector<mission_origin> origins; // Points of origin
@@ -260,9 +260,10 @@ private:
         npc_class_id recruit_class;// The type of NPC you are to recruit
         int target_npc_id;     // The ID of a specific NPC to interact with
         std::string monster_type;    // Monster ID that are to be killed
-        species_id monster_species;
-        int monster_kill_goal;  // the kill count you wish to reach
-        int deadline;           // Turn number
+        species_id monster_species;  // Monster species that are to be killed
+        int monster_kill_goal;  // The number of monsters you need to kill
+        int kill_count_to_reach; // The kill count you need to reach to complete mission
+        time_point deadline;
         int npc_id;             // ID of a related npc
         int good_fac_id, bad_fac_id; // IDs of the protagonist/antagonist factions
         int step;               // How much have we completed?
@@ -279,7 +280,7 @@ public:
     /** Getters, they mostly return the member directly, mostly. */
     /*@{*/
     bool has_deadline() const;
-    calendar get_deadline() const;
+    time_point get_deadline() const;
     std::string get_description() const;
     bool has_target() const;
     const tripoint &get_target() const;
@@ -334,7 +335,7 @@ public:
      * Create a new mission of the given type and assign it to the given npc.
      * Returns the new mission.
      */
-    static mission* reserve_new( mission_type_id type, int npc_id );
+    static mission* reserve_new( const mission_type_id &type, int npc_id );
     static mission* reserve_random( mission_origin origin, const tripoint &p, int npc_id );
     /**
      * Returns the mission with the matching id (@ref uid). Returns NULL if no mission with that

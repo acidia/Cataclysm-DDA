@@ -255,6 +255,7 @@ void MonsterGenerator::init_death()
     death_map["DETONATE"] = &mdeath::detonate; // Take them with you
     death_map["GAMEOVER"] = &mdeath::gameover;// Game over!  Defense mode
     death_map["PREG_ROACH"] = &mdeath::preg_roach;// Spawn some cockroach nymphs
+    death_map["FIREBALL"] = &mdeath::fireball;// Explode in a fireball
 
     /* Currently Unimplemented */
     //death_map["SHRIEK"] = &mdeath::shriek;// Screams loudly
@@ -265,6 +266,8 @@ void MonsterGenerator::init_death()
 void MonsterGenerator::init_attack()
 {
     add_hardcoded_attack( "NONE", mattack::none );
+    add_hardcoded_attack( "EAT_CROP", mattack::eat_crop );
+    add_hardcoded_attack( "EAT_FOOD", mattack::eat_food );
     add_hardcoded_attack( "ANTQUEEN", mattack::antqueen );
     add_hardcoded_attack( "SHRIEK", mattack::shriek );
     add_hardcoded_attack( "SHRIEK_ALERT", mattack::shriek_alert );
@@ -449,8 +452,13 @@ void MonsterGenerator::init_flags()
     flag_map["PATH_AVOID_DANGER_2"] = MF_AVOID_DANGER_2;
     flag_map["PRIORITIZE_TARGETS"] = MF_PRIORITIZE_TARGETS;
     flag_map["NOT_HALLUCINATION"] = MF_NOT_HALLU;
+    flag_map["CATFOOD"] = MF_CATFOOD;
+    flag_map["CATTLEFODDER"] = MF_CATTLEFODDER;
+    flag_map["BIRDFOOD"] = MF_BIRDFOOD;
+    flag_map["DOGFOOD"] = MF_DOGFOOD;
     flag_map["MILKABLE"] = MF_MILKABLE;
     flag_map["PET_WONT_FOLLOW"] = MF_PET_WONT_FOLLOW;
+    flag_map["DRIPS_NAPALM"] = MF_DRIPS_NAPALM;
 }
 
 void MonsterGenerator::set_species_ids( mtype &mon )
@@ -714,7 +722,7 @@ mtype_id MonsterGenerator::get_valid_hallucination() const
     return random_entry( hallucination_monsters );
 }
 
-m_flag MonsterGenerator::m_flag_from_string( std::string flag ) const
+m_flag MonsterGenerator::m_flag_from_string( const std::string &flag ) const
 {
     return flag_map.find( flag )->second;
 }
@@ -944,9 +952,9 @@ void MonsterGenerator::check_monster_definitions() const
         }
 
         if( mon.upgrades ) {
-            if( mon.half_life < 0 && mon.age_grow < 0) {
+            if( mon.half_life < 0 && mon.age_grow < 0 ) {
                 debugmsg( "half_life %d and age_grow %d (<0) of monster %s is invalid",
-                         mon.half_life, mon.age_grow, mon.id.c_str() );
+                          mon.half_life, mon.age_grow, mon.id.c_str() );
             }
             if( !mon.upgrade_into && !mon.upgrade_group ) {
                 debugmsg( "no into nor into_group defined for monster %s", mon.id.c_str() );
@@ -965,39 +973,39 @@ void MonsterGenerator::check_monster_definitions() const
         }
 
         if( mon.reproduces ) {
-            if( mon.baby_timer < 1) {
+            if( mon.baby_timer < 1 ) {
                 debugmsg( "Time between reproductions (%d) is invalid for %s",
-                         mon.baby_timer, mon.id.c_str() );
+                          mon.baby_timer, mon.id.c_str() );
             }
-            if( mon.baby_count < 1) {
+            if( mon.baby_count < 1 ) {
                 debugmsg( "Number of children (%d) is invalid for %s",
-                         mon.baby_count, mon.id.c_str() );
+                          mon.baby_count, mon.id.c_str() );
             }
             if( !mon.baby_monster && mon.baby_egg == "null" ) {
                 debugmsg( "No baby or egg defined for monster %s", mon.id.c_str() );
             }
-            if( mon.baby_monster && mon.baby_egg != "null") {
+            if( mon.baby_monster && mon.baby_egg != "null" ) {
                 debugmsg( "Both an egg and a live birth baby are defined for %s", mon.id.c_str() );
             }
             if( !mon.baby_monster.is_valid() ) {
                 debugmsg( "baby_monster %s of monster %s is not a valid monster id",
                           mon.baby_monster.c_str(), mon.id.c_str() );
             }
-            if( !item::type_is_defined( mon.baby_egg )) {
+            if( !item::type_is_defined( mon.baby_egg ) ) {
                 debugmsg( "item_id %s of monster %s is not a valid item id",
                           mon.baby_egg.c_str(), mon.id.c_str() );
             }
         }
 
         if( mon.biosignatures ) {
-            if( mon.biosig_timer < 1) {
+            if( mon.biosig_timer < 1 ) {
                 debugmsg( "Time between biosignature drops (%d) is invalid for %s",
-                         mon.biosig_timer, mon.id.c_str() );
+                          mon.biosig_timer, mon.id.c_str() );
             }
             if( mon.biosig_item == "null" ) {
                 debugmsg( "No biosignature drop defined for monster %s", mon.id.c_str() );
             }
-            if( !item::type_is_defined( mon.biosig_item )) {
+            if( !item::type_is_defined( mon.biosig_item ) ) {
                 debugmsg( "item_id %s of monster %s is not a valid item id",
                           mon.biosig_item.c_str(), mon.id.c_str() );
             }
